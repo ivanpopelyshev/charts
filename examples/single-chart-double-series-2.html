@@ -12,13 +12,12 @@
 <canvas width="300" height="400" id="chart"></canvas>
 
 <script>
-    const data = Array.from({length: 300}, (_, i) => ({
+    const data2 = Array.from({length: 300}, (_, i) => ({
         x: i,
-        y: (i%100===50) ? null :
-            (1 + Math.sin(Math.random() * Math.PI)) * 100 + Math.sin(i * 50) * 2 + i
+        y: (1 + Math.sin(Math.random() * Math.PI)) * 100 + Math.sin(i * 50) * 2 + i
     }));
 
-    const data2 = Array.from({length: 200}, (_, i) => ({
+    const data = Array.from({length: 200}, (_, i) => ({
         x: i - 50,
         y: i
     }));

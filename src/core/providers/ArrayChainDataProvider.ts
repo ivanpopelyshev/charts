@@ -1,4 +1,5 @@
 import {IArrayChainData, IData, IDataFetchResult, IDataProvider, IObjectData} from "../ISeriesDataOptions";
+import {toNumberOrNaN} from "./utils";
 
 export class ArrayChainDataProvider implements IDataProvider {
 
@@ -12,7 +13,7 @@ export class ArrayChainDataProvider implements IDataProvider {
 
         return {
             x: +entry[0],
-            y: +entry[1],
+            y: toNumberOrNaN(entry[1]),
             labelX: entry[0],
             labelY: entry[1],
             index
@@ -36,9 +37,11 @@ export class ArrayChainDataProvider implements IDataProvider {
             data[i] = this._fetchValueInternal(i + from);
 
             minX = Math.min(data[i].x, minX);
-            minY = Math.min(data[i].y, minY);
             maxX = Math.max(data[i].x, maxX);
-            maxY = Math.max(data[i].y, maxY);
+            if (!isNaN(data[i].y)) {
+                minY = Math.min(data[i].y, minY);
+                maxY = Math.max(data[i].y, maxY);
+            }
         }
 
         return Object.freeze({

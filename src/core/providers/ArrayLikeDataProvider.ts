@@ -1,4 +1,5 @@
 import {IArrayChainData, IData, IDataFetchResult, IDataProvider, ILabelData, IObjectData} from "../ISeriesDataOptions";
+import {toNumberOrNaN} from "./utils";
 
 export class ArrayLikeDataProvider implements IDataProvider {
     constructor(
@@ -29,8 +30,11 @@ export class ArrayLikeDataProvider implements IDataProvider {
 
         const data = arrayLike.slice(from, to)
                 .map((e: number, i) => {
-                    minY = Math.min(e, minY);
-                    maxY = Math.max(e, maxY);
+                    e = toNumberOrNaN(e);
+                    if (!isNaN(e)) {
+                        minY = Math.min(e, minY);
+                        maxY = Math.max(e, maxY);
+                    }
 
                     const x = (i + from) * this.step;
                     const y = e;

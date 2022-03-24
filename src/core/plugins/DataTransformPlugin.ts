@@ -16,6 +16,10 @@ class DataBounds implements IRangeObject {
         if (x < this.fromX) this.fromX = x;
         if (x > this.toX) this.toX = x;
 
+        if (isNaN(y)) {
+
+        }
+
         if (y < this.fromY) this.fromY = y;
         if (y > this.toY) this.toY = y;
     }
@@ -34,6 +38,7 @@ export class DataTransformPlugin implements IDataPlugin {
 	/**
 	 * @implements IDataPlugin
 	 * @inheritDoc
+     *
 	 */
 	init(context: PluggableProvider): boolean {
 		this.context = context;
