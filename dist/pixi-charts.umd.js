@@ -2,7 +2,7 @@
  
 /*!
  * @pixi/charts - v0.2.3
- * Compiled Fri, 17 Dec 2021 10:53:41 UTC
+ * Compiled Thu, 24 Mar 2022 12:08:47 UTC
  *
  * @pixi/charts is licensed under the MIT License.
  * http://www.opensource.org/licenses/mit-license
@@ -4401,6 +4401,13 @@ this.PIXI.charts = this.PIXI.charts || {};
         const AREA = 'area'; CHART_TYPE["AREA"] = AREA;
     })(exports.CHART_TYPE || (exports.CHART_TYPE = {}));
 
+    function toNumberOrNaN(num) {
+        if (num === null || num === undefined) {
+            return NaN;
+        }
+        return +num;
+    }
+
     class ArrayChainDataProvider  {
 
         constructor (
@@ -4413,7 +4420,7 @@ this.PIXI.charts = this.PIXI.charts || {};
 
             return {
                 x: +entry[0],
-                y: +entry[1],
+                y: toNumberOrNaN(entry[1]),
                 labelX: entry[0],
                 labelY: entry[1],
                 index
@@ -4437,9 +4444,11 @@ this.PIXI.charts = this.PIXI.charts || {};
                 data[i] = this._fetchValueInternal(i + from);
 
                 minX = Math.min(data[i].x, minX);
-                minY = Math.min(data[i].y, minY);
                 maxX = Math.max(data[i].x, maxX);
-                maxY = Math.max(data[i].y, maxY);
+                if (!isNaN(data[i].y)) {
+                    minY = Math.min(data[i].y, minY);
+                    maxY = Math.max(data[i].y, maxY);
+                }
             }
 
             return Object.freeze({
@@ -4485,8 +4494,11 @@ this.PIXI.charts = this.PIXI.charts || {};
 
             const data = arrayLike.slice(from, to)
                     .map((e, i) => {
-                        minY = Math.min(e, minY);
-                        maxY = Math.max(e, maxY);
+                        e = toNumberOrNaN(e);
+                        if (!isNaN(e)) {
+                            minY = Math.min(e, minY);
+                            maxY = Math.max(e, maxY);
+                        }
 
                         const x = (i + from) * this.step;
                         const y = e;
@@ -4514,12 +4526,12 @@ this.PIXI.charts = this.PIXI.charts || {};
     }
 
     function _nullishCoalesce(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } }
-
     class ObjectDataProvider extends ArrayChainDataProvider {
     	 _fetchValueInternal(index) {
     		const chain = this.data ;
     		const entry = chain[index];
 
+            entry.y = toNumberOrNaN(entry.y);
     		entry.labelX = _nullishCoalesce(entry.labelX, () => ( entry.x));
     		entry.labelY = _nullishCoalesce(entry.labelY, () => ( entry.y));
     		entry.index = index;
@@ -4690,6 +4702,10 @@ this.PIXI.charts = this.PIXI.charts || {};
             if (x < this.fromX) this.fromX = x;
             if (x > this.toX) this.toX = x;
 
+            if (isNaN(y)) {
+
+            }
+
             if (y < this.fromY) this.fromY = y;
             if (y > this.toY) this.toY = y;
         }
@@ -4708,6 +4724,7 @@ this.PIXI.charts = this.PIXI.charts || {};
     	/**
     	 * @implements IDataPlugin
     	 * @inheritDoc
+         *
     	 */
     	init(context) {
     		this.context = context;
@@ -5094,6 +5111,13 @@ gl_FragColor = vColor * clip;
         const CAP_BUTT2 = 4 << 5; JOINT_TYPE[JOINT_TYPE["CAP_BUTT2"] = CAP_BUTT2] = "CAP_BUTT2";
     })(JOINT_TYPE || (JOINT_TYPE = {}));
 
+    var LINE_SCALE_MODE; (function (LINE_SCALE_MODE) {
+        const NONE = 'none'; LINE_SCALE_MODE["NONE"] = NONE;
+        const NORMAL = 'normal'; LINE_SCALE_MODE["NORMAL"] = NORMAL;
+        const HORIZONTAL = 'horizontal'; LINE_SCALE_MODE["HORIZONTAL"] = HORIZONTAL;
+        const VERTICAL = 'vertical'; LINE_SCALE_MODE["VERTICAL"] = VERTICAL;
+    })(LINE_SCALE_MODE || (LINE_SCALE_MODE = {}));
+
     const plotVert = `precision highp float;
 const float FILL = 1.0;
 const float BEVEL = 4.0;
@@ -5128,6 +5152,7 @@ varying float vType;
 uniform float resolution;
 uniform float expand;
 uniform float miterLimit;
+uniform float scaleMode;
 uniform vec2 styleLine;
 
 vec2 doBisect(vec2 norm, float len, vec2 norm2, float len2,
@@ -5160,19 +5185,18 @@ void main(void){
 
     float type = aVertexJoint;
 
-    vec2 avgDiag = (translationMatrix * vec3(1.0, 1.0, 0.0)).xy;
-    float avgScale = sqrt(dot(avgDiag, avgDiag) * 0.5);
-
+    float lineWidth = styleLine.x;
+    if (scaleMode > 2.5) {
+        lineWidth *= length(translationMatrix * vec3(1.0, 0.0, 0.0));
+    } else if (scaleMode > 1.5) {
+        lineWidth *= length(translationMatrix * vec3(0.0, 1.0, 0.0));
+    } else if (scaleMode > 0.5) {
+        vec2 avgDiag = (translationMatrix * vec3(1.0, 1.0, 0.0)).xy;
+        lineWidth *= sqrt(dot(avgDiag, avgDiag) * 0.5);
+    }
     float capType = floor(type / 32.0);
     type -= capType * 32.0;
     vArc = vec4(0.0);
-
-    float lineWidth = styleLine.x;
-    if (lineWidth < 0.0) {
-        lineWidth = -lineWidth;
-    } else {
-        lineWidth = lineWidth * avgScale;
-    }
     lineWidth *= 0.5;
     float lineAlignment = 2.0 * styleLine.y - 1.0;
 
@@ -5486,6 +5510,7 @@ void main(void){
                 uniforms: {
                     resolution: 1,
                     expand: 1,
+                    scaleMode: 1,
                     styleLine: new Float32Array([1.0, 0.5]),
                     miterLimit: 5.0,
                 },
@@ -5642,13 +5667,29 @@ void main(void){
             for (let i = this.lastPointNum; i < points.length; i += stridePoints) {
                 _floatView[j++] = points[i];
                 _floatView[j++] = points[i + 1];
-                _floatView[j] = jointType;
-                if (i == 0 && capType !== JOINT_TYPE.CAP_ROUND) {
-                    _floatView[j] += capType;
+
+                if (isNaN(points[i]) || isNaN(points[i + 1])) {
+                    // find prev non-nan
+                    _floatView[j-2] = (points[i+2] + points[i-2]) * 0.5;
+                    _floatView[j-1] = (points[i+3] + points[i-1]) * 0.5;
+                    _floatView[j] = 0;
+                    j++;
+                    continue;
                 }
-                if (i + stridePoints * 2 >= points.length) {
+
+                _floatView[j] = jointType;
+                if (i == 0) {
+                    if (capType !== JOINT_TYPE.CAP_ROUND) {
+                        _floatView[j] += capType;
+                    }
+                } else {
+                    if (isNaN(points[i - 2]) || isNaN(points[i - 1])) {
+                        _floatView[j] += JOINT_TYPE.CAP_BUTT;
+                    }
+                }
+                if (i + stridePoints * 2 >= points.length || isNaN(points[i + 4]) || isNaN(points[i + 5])) {
                     _floatView[j] += endJoint - jointType;
-                } else if (i + stridePoints >= points.length) {
+                } else if (i + stridePoints >= points.length || isNaN(points[i + 2]) || isNaN(points[i + 3])) {
                     _floatView[j] = 0;
                 }
                 j++;
@@ -5793,16 +5834,29 @@ void main(void){
 
 
 
+
+
+
+
+
+
+
+
+
+
+
     class Plot extends mesh.Mesh {
         constructor(options) {
             const geometry = new PlotGeometry();
             const shader = new PlotShader();
+            let scaleMode = LINE_SCALE_MODE.NORMAL;
             if (options) {
                 if (options.lineWidth !== undefined) {
                     shader.uniforms.styleLine[0] = options.lineWidth;
                 }
                 if (options.nativeLineWidth !== undefined) {
                     shader.uniforms.styleLine[0] = options.nativeLineWidth;
+                    scaleMode = LINE_SCALE_MODE.NONE;
                 }
                 if (options.joinStyle !== undefined) {
                     geometry.joinStyle = options.joinStyle;
@@ -5813,6 +5867,7 @@ void main(void){
             }
 
             super(geometry, shader);
+            this.scaleMode = scaleMode;
         }
 
         moveTo(x, y) {
@@ -5840,9 +5895,11 @@ void main(void){
             const geometry = this.geometry ;
             if (width !== undefined) {
                 this.shader.uniforms.styleLine[0] = width;
+                this.scaleMode = LINE_SCALE_MODE.NORMAL;
             }
             if (nativeWidth !== undefined) {
-                this.shader.uniforms.styleLine[0] = -nativeWidth;
+                this.shader.uniforms.styleLine[0] = nativeWidth;
+                this.scaleMode = LINE_SCALE_MODE.NONE;
             }
             if (joinStyle !== undefined) {
                 geometry.joinStyle = joinStyle;
@@ -5858,6 +5915,12 @@ void main(void){
             if (obj.width !== undefined) {
                 this.shader.uniforms.styleLine[0] = obj.width;
             }
+            if (obj.alignment !== undefined) {
+                this.shader.uniforms.styleLine[0] = obj.alignment;
+            }
+            if (obj.scaleMode !== undefined) {
+                this.shader.uniforms.scaleMode = obj.scaleMode;
+            }
             if (obj.color !== undefined) {
                 this.tint = obj.color;
             }
@@ -5868,6 +5931,23 @@ void main(void){
                 geometry.capStyle = obj.cap;
             }
         }
+
+        set scaleMode(value) {
+            this._scaleMode = value;
+            let intVal = 0;
+            switch (value) {
+                case LINE_SCALE_MODE.NORMAL: intVal = 1; break;
+                case LINE_SCALE_MODE.HORIZONTAL: intVal = 2; break;
+                case LINE_SCALE_MODE.VERTICAL: intVal = 3; break;
+            }
+            this.shader.uniforms.scaleMode = intVal;
+        }
+
+        get scaleMode() {
+            return this._scaleMode
+        }
+
+        
 
         clear() {
             (this.geometry ).reset();
