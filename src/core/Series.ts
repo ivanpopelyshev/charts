@@ -415,8 +415,7 @@ export class Series extends EventEmitter {
     }
 
     protected parse() {
-        const data = this.options.data;
-        const labels = this.options.labels;
+        const { data, labels } = this.options;
 
         let dataProvider: IDataProvider;
 
