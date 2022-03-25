@@ -94,6 +94,7 @@ export class Series extends EventEmitter {
     private readonly _range: Range = new Range();
     private readonly _localTransform = new Transform();
     private readonly _worldTransform = new Transform();
+    public readonly chainBounds = new Range();
 
     public get transform(): Transform {
         if (this.parent) {
